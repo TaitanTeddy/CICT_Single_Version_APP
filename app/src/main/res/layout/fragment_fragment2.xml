@@ -1,0 +1,98 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.teddy.swipewindowspractice.Fragment2">
+
+    <!-- TODO: Update blank fragment layout -->
+    <com.github.mikephil.charting.charts.BarChart
+        android:id="@+id/Barchart"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="30dp"
+        android:layout_marginLeft="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignTop="@+id/Barchart"
+        android:layout_marginTop="149dp"
+        android:elevation="0dp"
+        android:ems="1"
+        android:text="@string/fragment2_txtCount" />
+
+    <TextView
+        android:id="@+id/txtTime1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="43dp"
+        android:layout_marginStart="43dp"
+        android:text="TextView"
+        android:textSize="8dp"
+        android:textColor="@android:color/black"
+        android:layout_above="@+id/textView2"
+        android:layout_toRightOf="@+id/textView2"
+        android:layout_toEndOf="@+id/textView2" />
+
+    <TextView
+        android:id="@+id/txtTime2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="13dp"
+        android:layout_marginStart="13dp"
+        android:text="TextView"
+        android:textSize="8dp"
+        android:textColor="@android:color/black"
+        android:layout_alignBaseline="@+id/txtTime1"
+        android:layout_alignBottom="@+id/txtTime1"
+        android:layout_toRightOf="@+id/txtTime1"
+        android:layout_toEndOf="@+id/txtTime1" />
+
+    <TextView
+        android:id="@+id/txtTime3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="12dp"
+        android:layout_marginStart="12dp"
+        android:text="TextView"
+        android:textSize="8dp"
+        android:textColor="@android:color/black"
+        android:layout_alignBaseline="@+id/txtTime2"
+        android:layout_alignBottom="@+id/txtTime2"
+        android:layout_toRightOf="@+id/txtTime2"
+        android:layout_toEndOf="@+id/txtTime2"
+        android:layout_centerHorizontal="true" />
+
+    <TextView
+        android:id="@+id/txtTime4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="12dp"
+        android:layout_marginStart="12dp"
+        android:text="TextView"
+        android:textSize="8dp"
+        android:textColor="@android:color/black"
+        android:layout_alignBaseline="@+id/txtTime3"
+        android:layout_alignBottom="@+id/txtTime3"
+        android:layout_toRightOf="@+id/txtTime3"
+        android:layout_toEndOf="@+id/txtTime3" />
+
+    <TextView
+        android:id="@+id/txtTime5"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="12dp"
+        android:layout_marginStart="12dp"
+        android:text="TextView"
+        android:textSize="8dp"
+        android:textColor="@android:color/black"
+        android:layout_alignBaseline="@+id/txtTime4"
+        android:layout_alignBottom="@+id/txtTime4"
+        android:layout_toRightOf="@+id/txtTime4"
+        android:layout_toEndOf="@+id/txtTime4" />
+</RelativeLayout>

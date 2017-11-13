@@ -1,0 +1,28 @@
+<resources>
+
+    <!-- TODO: App名稱 -->
+    <string name="app_name">墜落偵測系統</string>
+
+    <!-- TODO: 即時圖表(Fragment1)的門檻值設定名稱 -->
+    <string-array name="spinner_threshold_array">
+        <item>敏感</item>
+        <item>普通</item>
+        <item>不敏感</item>
+    </string-array>
+    <string name="fragment1_txtTime">時間</string>
+
+    <!-- TODO: 累計圖表(Fragment2)的頻率設定名稱 -->
+    <string-array name="spinner_frequency_array">
+        <item>每半小時</item>
+        <item>每小時</item>
+        <item>每兩小時</item>
+        <item>每四小時</item>
+        <item>每八小時</item>
+        <item>每天</item>
+    </string-array>
+    <string name="fragment2_txtCount">發生次數</string>
+
+
+    <string name="txt_parameter_threshold">門檻值</string>
+    <string name="txt_parameter_frequency">頻率</string>
+</resources>
