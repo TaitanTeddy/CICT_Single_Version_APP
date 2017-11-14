@@ -7,7 +7,6 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
-import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -17,24 +16,23 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 
-import static com.example.teddy.swipewindowspractice.Fragment2.FREQUENCY_HALF_HOUR;
+import static com.example.teddy.swipewindowspractice.accumulationFragment.FREQUENCY_HALF_HOUR;
 
 public class MainActivity extends AppCompatActivity {
 
     //宣告SectionPagerAdapter和ViewPager物件
-    //SectionPagerAdapter是繼承FragmentPagerAdapter或是
-    //FragmentStatePagerAdapter的自訂類別
+    //SectionPagerAdapter是繼承FragmentPagerAdapter或是FragmentStatePagerAdapter的自訂類別
     SectionsPagerAdapter mSectionsPagerAdapter;
     ViewPager mViewPager;
     TabLayout tabLayout;
 
-    //private MyDBHelper myDBHelper = null;
-
+    //定義menu的int
     private static final int MENU_SELECT_VALUE_SETTING = Menu.FIRST,
                             MENU_SELECT_ABOUT = Menu.FIRST+1,
                             MENU_SELECT_REFRESH = Menu.FIRST+2;
-    public static final int MENU_FREG1 = 0,MENU_FREG2 = 1;
-
+    //現在在哪個fragment
+    public static final int MENU_REALTIME = 0,MENU_ACCUMULATION = 1;
+    //工人狀態
     public static final int STATE_FALL = 1, STATE_COMA = 2, STATE_DROP =3;
 
     @Override
@@ -43,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         //getSupportActionBar().hide(); // 隱藏APP名稱
 
-        ActionBar actionBar = getSupportActionBar();
+        //ActionBar actionBar = getSupportActionBar();
         //actionBar.setBackgroundDrawable(new ColorDrawable(0xFF505050));
 
         mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
@@ -56,17 +54,7 @@ public class MainActivity extends AppCompatActivity {
         tabLayout = (TabLayout)findViewById(R.id.tabLayout);
         tabLayout.setupWithViewPager(mViewPager);
 
-        //myDBHelper.getWritableDatabase().execSQL("DROP TABLE IF EXISTS " + "FallTable");
     }
-
-
-    /*private void openDB() {
-        myDBHelper = new MyDBHelper(this);
-    }
-
-    private void closeDB(){
-        myDBHelper.close();
-    }*/
 
 
     // 建立ViewPager和TabLayout選單的class
@@ -83,10 +71,10 @@ public class MainActivity extends AppCompatActivity {
             //根據目前頁面的編號，傳回對應的fragment物件
             switch (position){
                 case 0:
-                    fragment = new Fragment1();
+                    fragment = new realtimeFragment();
                     break;
                 case 1:
-                    fragment = new Fragment2();
+                    fragment = new accumulationFragment();
                     break;
             }
             return fragment;
@@ -118,20 +106,24 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    //onPrepareOptionsMenu需一起Override
     @Override
     public void invalidateOptionsMenu() {
         super.invalidateOptionsMenu();
     }
 
+    //每次點menu時都進來一次
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         switch (tabLayout.getSelectedTabPosition()){
-            case MENU_FREG1:
+            //在Real-time Fragment的話就進這個
+            case MENU_REALTIME:
                 menu.clear();
                 menu.add(0,MENU_SELECT_VALUE_SETTING,0,"參數設定");
                 menu.add(0,MENU_SELECT_ABOUT,0,"說明");
                 return true;
-            case MENU_FREG2:
+            //在Accumulation Fragment就進這個
+            case MENU_ACCUMULATION:
                 menu.clear();
                 menu.add(0,MENU_SELECT_VALUE_SETTING,0,"參數設定");
                 menu.add(0,MENU_SELECT_ABOUT,0,"說明");
@@ -141,22 +133,24 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    //選擇menu裡的選項
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
-        if(tabLayout.getSelectedTabPosition() == MENU_FREG1) {
+        //Real-time中的選項
+       if(tabLayout.getSelectedTabPosition() == MENU_REALTIME) {
             switch (item.getItemId()) {
                 case MENU_SELECT_VALUE_SETTING:
                     AlertDialog.Builder mBuilder = new AlertDialog.Builder(MainActivity.this);
-                    View mView = getLayoutInflater().inflate(R.layout.parameter_dialog_spinner, null);
+                    View mView = getLayoutInflater().inflate(R.layout.treshold_spinner, null);
                     mBuilder.setTitle("參數設定");
                     final Spinner SpnThresholdParameter = (Spinner) mView.findViewById(R.id.spinner_parameter_threshold);
 
-                    ArrayAdapter<String> arrayAdapterT = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_spinner_item
+                    ArrayAdapter<String> arrayAdapterThreshold = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_spinner_item
                             , getResources().getStringArray(R.array.spinner_threshold_array));
-                    arrayAdapterT.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    arrayAdapterThreshold.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-                    SpnThresholdParameter.setAdapter(arrayAdapterT);
+                    SpnThresholdParameter.setAdapter(arrayAdapterThreshold);
 
 
                     mBuilder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
@@ -164,16 +158,16 @@ public class MainActivity extends AppCompatActivity {
                         public void onClick(DialogInterface dialog, int which) {
                             switch (SpnThresholdParameter.getSelectedItemPosition()){
                                 case 0:
-                                    Fragment1.Treshold = Fragment1.TresholdSen;
-                                    Log.d("Treshold", Integer.toString(Fragment1.Treshold));
+                                    realtimeFragment.Threshold = realtimeFragment.ThresholdSen;
+                                    Log.d("Threshold", Integer.toString(realtimeFragment.Threshold));
                                     break;
                                 case 1:
-                                    Fragment1.Treshold = Fragment1.TresholdNor;
-                                    Log.d("Treshold", Integer.toString(Fragment1.Treshold));
+                                    realtimeFragment.Threshold = realtimeFragment.ThresholdNor;
+                                    Log.d("Threshold", Integer.toString(realtimeFragment.Threshold));
                                     break;
                                 case 2:
-                                    Fragment1.Treshold = Fragment1.TresholdNotSen;
-                                    Log.d("Treshold", Integer.toString(Fragment1.Treshold));
+                                    realtimeFragment.Threshold = realtimeFragment.ThresholdNotSen;
+                                    Log.d("Threshold", Integer.toString(realtimeFragment.Threshold));
                                     break;
                             }
                         }
@@ -199,44 +193,46 @@ public class MainActivity extends AppCompatActivity {
                     return true;
             }
         }
-        if(tabLayout.getSelectedTabPosition() == MENU_FREG2){
+
+        //Accumulation中的選項
+        if(tabLayout.getSelectedTabPosition() == MENU_ACCUMULATION){
             switch (item.getItemId()) {
                 case MENU_SELECT_VALUE_SETTING:
                     AlertDialog.Builder mBuilder = new AlertDialog.Builder(MainActivity.this);
-                    View mView = getLayoutInflater().inflate(R.layout.parameter_dialog_spinner2, null);
+                    View mView = getLayoutInflater().inflate(R.layout.frequency_spinner, null);
                     mBuilder.setTitle("參數設定");
                     final Spinner SpnFrequencyParameter = (Spinner) mView.findViewById(R.id.spinner_parameter_Frequency);
-                    ArrayAdapter<String> arrayAdapterF = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_spinner_item
+                    ArrayAdapter<String> arrayAdapterFrequency = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_spinner_item
                             , getResources().getStringArray(R.array.spinner_frequency_array));
-                    arrayAdapterF.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                    SpnFrequencyParameter.setAdapter(arrayAdapterF);
+                    arrayAdapterFrequency.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    SpnFrequencyParameter.setAdapter(arrayAdapterFrequency);
                     mBuilder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
                             switch (SpnFrequencyParameter.getSelectedItemPosition()){
                                 case 0:
-                                    Fragment2.FrequencyState = FREQUENCY_HALF_HOUR;
+                                    accumulationFragment.FrequencyState = FREQUENCY_HALF_HOUR;
                                     break;
                                 case 1:
-                                    Fragment2.FrequencyState = Fragment2.FREQUENCY_ONE_HOUR;
+                                    accumulationFragment.FrequencyState = accumulationFragment.FREQUENCY_ONE_HOUR;
                                     break;
                                 case 2:
-                                    Fragment2.FrequencyState = Fragment2.FREQUENCY_TWO_HOUR;
+                                    accumulationFragment.FrequencyState = accumulationFragment.FREQUENCY_TWO_HOUR;
                                     break;
                                 case 3:
-                                    Fragment2.FrequencyState = Fragment2.FREQUENCY_FOUR_HOUR;
+                                    accumulationFragment.FrequencyState = accumulationFragment.FREQUENCY_FOUR_HOUR;
                                     break;
                                 case 4:
-                                    Fragment2.FrequencyState = Fragment2.FREQUENCY_EIGHT_HOUR;
+                                    accumulationFragment.FrequencyState = accumulationFragment.FREQUENCY_EIGHT_HOUR;
                                     break;
                                 case 5:
-                                    Fragment2.FrequencyState = Fragment2.FREQENCY_ONE_DAY;
+                                    accumulationFragment.FrequencyState = accumulationFragment.FREQUENCY_ONE_DAY;
                                     break;
                             }
                             FragmentManager fragmentManager = getSupportFragmentManager();
                             for (Fragment fragment : fragmentManager.getFragments()) {
-                                if (fragment != null && fragment.isVisible() && fragment instanceof Fragment2) {
-                                    ((Fragment2) fragment).setBasicChart();
+                                if (fragment != null && fragment.isVisible() && fragment instanceof accumulationFragment) {
+                                    ((accumulationFragment) fragment).setBasicChart();
                                 }
                             }
                         }
@@ -263,8 +259,8 @@ public class MainActivity extends AppCompatActivity {
                 case MENU_SELECT_REFRESH:
                     FragmentManager fragmentManager = getSupportFragmentManager();
                     for (Fragment fragment : fragmentManager.getFragments()) {
-                        if (fragment != null && fragment.isVisible() && fragment instanceof Fragment2) {
-                            ((Fragment2) fragment).setBasicChart();
+                        if (fragment != null && fragment.isVisible() && fragment instanceof accumulationFragment) {
+                            ((accumulationFragment) fragment).setBasicChart();
                         }
                     }
                     return true;

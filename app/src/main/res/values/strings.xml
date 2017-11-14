@@ -1,9 +1,9 @@
 <resources>
 
-    <!-- TODO: App名稱 -->
+    <!-- App名稱 -->
     <string name="app_name">墜落偵測系統</string>
 
-    <!-- TODO: 即時圖表(Fragment1)的門檻值設定名稱 -->
+    <!-- 即時圖表(Fragment1)的門檻值設定名稱 -->
     <string-array name="spinner_threshold_array">
         <item>敏感</item>
         <item>普通</item>
@@ -11,7 +11,7 @@
     </string-array>
     <string name="fragment1_txtTime">時間</string>
 
-    <!-- TODO: 累計圖表(Fragment2)的頻率設定名稱 -->
+    <!-- 累計圖表(Fragment2)的頻率設定名稱 -->
     <string-array name="spinner_frequency_array">
         <item>每半小時</item>
         <item>每小時</item>

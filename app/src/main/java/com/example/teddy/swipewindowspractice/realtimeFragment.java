@@ -1,16 +1,11 @@
 package com.example.teddy.swipewindowspractice;
 
 
-import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Color;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
@@ -38,41 +33,34 @@ import java.util.List;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Fragment1 extends Fragment implements SensorEventListener{
+public class realtimeFragment extends Fragment implements AcclerService.Callbacks{
 
     private LineChart chart;
     private LineDataSet lineDataSet;
     public static LineData lineData;
-    private SensorManager sensorManager;
     private List<ILineDataSet> dataSets;
     public static ArrayList<String> TimeArray = new ArrayList<String>();
     private XAxis xAxis;
     private YAxis yAxisL;
     private LimitLine limitLine;
-    //private boolean isValueInitiate=false;
     private MyDBHelper myDBHelper = null;
 
-    private long LastUpdateTime;
-    private static final int Update_Interval_Time = 100;
-    //private float Xval=0.0f,Yval=0.0f,Zval=0.0f;
-    public static int Treshold = 15;
-    public final static int TresholdSen = 15, TresholdNor = 20,TresholdNotSen = 25 ;
+    public static int Threshold = 15;
+    public final static int ThresholdSen = 15, ThresholdNor = 20,ThresholdNotSen = 25 ;
 
     AcclerService acclerService;
-    Boolean isBound =false;
+    public static Boolean isBound =false;
 
-    //private TextView txtText;
 
-    public Fragment1() {
+    public realtimeFragment() {
         // Required empty public constructor
     }
-
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_fragment1, container, false);
+        return inflater.inflate(R.layout.fragment_realtime, container, false);
     }
 
     @Override
@@ -80,10 +68,38 @@ public class Fragment1 extends Fragment implements SensorEventListener{
         super.onActivityCreated(savedInstanceState);
 
         chart = (LineChart) getView().findViewById(R.id.chart);
-        //txtText = (TextView)getView().findViewById(R.id.txtTest);
         //畫出基礎圖表
         setBasicChart();
+        //
         openDB();
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        Intent intent = new Intent(getActivity(), AcclerService.class);
+        getActivity().bindService(intent,serviceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Unbind from the service
+        if (isBound) {
+            getActivity().unbindService(serviceConnection);
+            isBound = false;
+        }
+        closeDB();
     }
 
     /** Defines callbacks for service binding, passed to bindService() */
@@ -96,6 +112,7 @@ public class Fragment1 extends Fragment implements SensorEventListener{
             AcclerService.LocalBinder binder = (AcclerService.LocalBinder) service;
             acclerService = binder.getService();
             isBound = true;
+            acclerService.registerClient(realtimeFragment.this);
         }
 
         @Override
@@ -113,48 +130,7 @@ public class Fragment1 extends Fragment implements SensorEventListener{
         myDBHelper.close();
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        // Unbind from the service
-        if (isBound) {
-            getActivity().unbindService(serviceConnection);
-            isBound = false;
-        }
-        closeDB();
-    }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        Intent intent = new Intent(getActivity(), AcclerService.class);
-        getActivity().bindService(intent,serviceConnection, Context.BIND_AUTO_CREATE);
-        if(this.getUserVisibleHint()) {
-            this.registerSensorListener();
-        }
-    }
-
-
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        this.unregisterSensorListener();
-    }
-
-    private void registerSensorListener() {
-        sensorManager.registerListener(this, sensorManager.getSensorList(Sensor.TYPE_ACCELEROMETER).get(0), SensorManager.SENSOR_DELAY_FASTEST);
-    }
-
-    private void unregisterSensorListener() {
-        sensorManager.unregisterListener(this);
-    }
-
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        sensorManager = (SensorManager) this.getActivity().getSystemService(Activity.SENSOR_SERVICE);
-    }
 
     public void setBasicChart(){
         chart.getDescription().setEnabled(false);
@@ -169,8 +145,6 @@ public class Fragment1 extends Fragment implements SensorEventListener{
 
         //輸入一個值避免error
         entries.add(new Entry(0, 0));
-
-
         //第一筆資料的標題
         lineDataSet = new LineDataSet(entries, "加速規數值");
         lineDataSet.setAxisDependency(YAxis.AxisDependency.LEFT);
@@ -203,7 +177,7 @@ public class Fragment1 extends Fragment implements SensorEventListener{
         yAxisL.setAxisMaximum(30.0f);
         yAxisL.enableAxisLineDashedLine(1f,1f,1f);
 
-        limitLine = new LimitLine((float)Treshold,"門檻值");
+        limitLine = new LimitLine((float)Threshold,"門檻值");
         limitLine.setLineColor(Color.RED);
         limitLine.setLineWidth(2f);
         yAxisL.addLimitLine(limitLine);
@@ -222,90 +196,40 @@ public class Fragment1 extends Fragment implements SensorEventListener{
         chart.moveViewToX(lineData.getEntryCount());
 
     }
+
+    //接收AccelerService的資料，並畫出來
     @Override
-    public void onSensorChanged(SensorEvent event) {
-
-        if(!isBound)return;
-
-        //一小段時間才取一次值
-        long CurrentUpdateTime = System.currentTimeMillis();
-        long TimeInterval = CurrentUpdateTime - LastUpdateTime;
-        if (TimeInterval < Update_Interval_Time) return;
-        LastUpdateTime = CurrentUpdateTime;
+    public void updateChart() {
 
         //依據選擇的門檻值改變圖表上的門檻值
-        switch (Treshold){
-            case TresholdSen:
-                yAxisL.removeAllLimitLines();
-                limitLine = new LimitLine((float)TresholdSen,"門檻值");
-                limitLine.setLineColor(Color.RED);
-                limitLine.setLineWidth(2f);
-                yAxisL.addLimitLine(limitLine);
+        switch (Threshold){
+            case ThresholdSen:
+                designThreshold(ThresholdSen);
                 break;
-            case TresholdNor:
-                yAxisL.removeAllLimitLines();
-                limitLine = new LimitLine((float)TresholdNor,"門檻值");
-                limitLine.setLineColor(Color.RED);
-                limitLine.setLineWidth(2f);
-                yAxisL.addLimitLine(limitLine);
-
+            case ThresholdNor:
+                designThreshold(ThresholdNor);
                 break;
-            case TresholdNotSen:
-                yAxisL.removeAllLimitLines();
-                limitLine = new LimitLine((float)TresholdNotSen,"門檻值");
-                limitLine.setLineColor(Color.RED);
-                limitLine.setLineWidth(2f);
-                yAxisL.addLimitLine(limitLine);
+            case ThresholdNotSen:
+                designThreshold(ThresholdNotSen);
                 break;
         }
 
-        //使圖表為動態，加入演算法資料
-        DynamicChart();
-    }
-
-   /* private void addToDB(int state, String dataNow) {
-        String time = acclerService.getCurrentTime();
-        SQLiteDatabase db = myDBHelper.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("_DATE",dataNow);
-        values.put("_TIME",time);
-        values.put("_STATE",state);
-        db.insert("FallTable",null,values);
-        Log.d(TAG,"存入"+time+state);
-
-        Cursor cursor = db.rawQuery("SELECT _TIME FROM FallTable",null);
-        cursor.moveToFirst();
-        do{
-            Log.d(TAG,cursor.getString(0));
-        }while (cursor.moveToNext());
-    }*/
-
-
-    public void DropTable(){
-
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-    }
-
-    //動態顯示圖形
-    public void DynamicChart(){
-
-
-        //將x軸移置到最後面
-        chart.moveViewToX(lineData.getEntryCount());
-
-        //將新的資料加到最後面，最後一個參數為放入哪個dataSet
-        //lineData.addEntry(new Entry(lineData.getEntryCount(),(float) algorithmValue),0);
+        //提醒lineData有更新了
         lineData.notifyDataChanged();
         chart.notifyDataSetChanged();
-
         //設定圖表中x軸最大的值
         chart.setVisibleXRangeMaximum(600);
         chart.moveViewToX(lineData.getEntryCount());
     }
+
+    private void designThreshold(int threshold){
+        yAxisL.removeAllLimitLines();
+        limitLine = new LimitLine((float)threshold,"門檻值");
+        limitLine.setLineColor(Color.RED);
+        limitLine.setLineWidth(2f);
+        yAxisL.addLimitLine(limitLine);
+    }
+
 
     //將X軸變成String
     public class xAxisValueFormatter implements IAxisValueFormatter {

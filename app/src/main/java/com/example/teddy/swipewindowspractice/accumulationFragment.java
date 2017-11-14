@@ -37,16 +37,17 @@ import static com.example.teddy.swipewindowspractice.MainActivity.STATE_FALL;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class Fragment2 extends Fragment {
+public class accumulationFragment extends Fragment {
     private BarChart barChart;
     private MyDBHelper myDBHelper = null;
     private TextView txtTime1, txtTime2, txtTime3, txtTime4, txtTime5;
 
-    public static final int FREQUENCY_HALF_HOUR=0, FREQUENCY_ONE_HOUR=1, FREQUENCY_TWO_HOUR=2, FREQUENCY_FOUR_HOUR=3, FREQUENCY_EIGHT_HOUR=4,
-                    FREQENCY_ONE_DAY =5;
+    public static final int FREQUENCY_HALF_HOUR=0, FREQUENCY_ONE_HOUR=1,
+                        FREQUENCY_TWO_HOUR=2, FREQUENCY_FOUR_HOUR=3,
+                        FREQUENCY_EIGHT_HOUR=4, FREQUENCY_ONE_DAY =5;
     public static int FrequencyState =0;
 
-    public Fragment2() {
+    public accumulationFragment() {
         // Required empty public constructor
     }
 
@@ -55,7 +56,7 @@ public class Fragment2 extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_fragment2, container, false);
+        return inflater.inflate(R.layout.fragment_accumulation, container, false);
     }
 
     @Override
@@ -63,7 +64,6 @@ public class Fragment2 extends Fragment {
         super.onActivityCreated(savedInstanceState);
         barChart = (BarChart)getView().findViewById(R.id.Barchart);
 
-        //預設頻率為每半小時4
         setBasicUI();
         openDB();
         setBasicChart();
@@ -86,39 +86,13 @@ public class Fragment2 extends Fragment {
     public void setBasicChart(){
 
 
-        XAxis xAxis = barChart.getXAxis();
         //取得現在時間
-        Calendar mCal = Calendar.getInstance();
-        String dataFormat = "yyyy-MM-dd kk:mm:ss";
-        SimpleDateFormat df = new SimpleDateFormat(dataFormat);
-        SimpleDateFormat dfXaxis = new SimpleDateFormat("kk:mm:ss");
-        SimpleDateFormat dfXText = new SimpleDateFormat("yyyy-MM-dd");
-        //String now = df.format(mCal.getTime());
-        //Log.d(TAG,"現在時間是 " + now);
 
-        String[] TimeArray = new String[5];
 
-        switch(FrequencyState) {
-            case FREQUENCY_HALF_HOUR:
-                TimeArray = getTimeArray(mCal,TimeArray,dfXaxis,dfXText,1);
-                break;
-            case FREQUENCY_ONE_HOUR:
-                TimeArray = getTimeArray(mCal,TimeArray,dfXaxis,dfXText,2);
-                break;
-            case FREQUENCY_TWO_HOUR:
-                TimeArray = getTimeArray(mCal,TimeArray,dfXaxis,dfXText,4);
-                break;
-            case FREQUENCY_FOUR_HOUR:
-                TimeArray = getTimeArray(mCal,TimeArray,dfXaxis,dfXText,8);
-                break;
-            case FREQUENCY_EIGHT_HOUR:
-                TimeArray = getTimeArray(mCal,TimeArray,dfXaxis,dfXText,16);
-                break;
-            case FREQENCY_ONE_DAY:
-                TimeArray = getTimeArray(mCal,TimeArray,dfXaxis,dfXText,48);
-                break;
-        }
-
+        /***
+         * 從DataBase取出資料
+         * 放進FallArray、ComaArray、DropArray中
+         */
         SQLiteDatabase db =myDBHelper.getReadableDatabase();
         /*SQLiteDatabase db =myDBHelper.getWritableDatabase();
         String SQL = "CREATE TABLE IF NOT EXISTS " + "FallTable" +"("+
@@ -128,6 +102,8 @@ public class Fragment2 extends Fragment {
                 "_STATE INTEGER"+
                 ");";
         db.execSQL(SQL);*/
+
+        //將cursor指向每個資料表的第一個
         Cursor cursorTime = db.rawQuery("SELECT _TIME FROM FallTable", null);
         cursorTime.moveToFirst();
         Cursor cursorDate = db.rawQuery("SELECT _DATE FROM FallTable", null);
@@ -135,134 +111,170 @@ public class Fragment2 extends Fragment {
         Cursor cursorState = db.rawQuery("SELECT _STATE FROM FallTable", null);
         cursorState.moveToFirst();
 
-        ArrayList<String> intPreData =new ArrayList<String>();
-        ArrayList<Integer> stateData = new ArrayList<Integer>();
+
+        ArrayList<String> dbTimeList =new ArrayList<String>();
+        ArrayList<Integer> dbStateList = new ArrayList<Integer>();
         int DataCount = 0;
 
-        //取得資料庫的每個值存入strPreData[]
+        //取得資料庫的每個值存入dbTimeList、dbStateList
         if (cursorTime.getCount()>0 && cursorDate.getCount()>0 && cursorState.getCount()>0){
             do {
-                //包括日期轉成long方便進行時間計算
-                intPreData.add(cursorDate.getString(0)+" "+cursorTime.getString(0));
-                Log.d("讀出資料庫時間", intPreData.get(DataCount));
+                //日期跟時間都放dbTimeList，轉成long方便進行時間計算
+                dbTimeList.add(cursorDate.getString(0)+" "+cursorTime.getString(0));
+                Log.d("讀出資料庫時間", dbTimeList.get(DataCount));
                 Log.d("資料庫狀態", cursorState.getString(0));
-                stateData.add(cursorState.getInt(0));
+                dbStateList.add(cursorState.getInt(0));
                 DataCount++;
             } while (cursorTime.moveToNext() && cursorDate.moveToNext() && cursorState.moveToNext());
         }
-        Log.d("stateData",stateData.toString());
-        //累計危險發生幾次的陣列
-        //float[] BarArray = new float[5];
+        //Log.d("stateData",dbStateList.toString());
 
-        //取的現在時間
-        long nowTime = 0;
+        //取得現在時間
+        Calendar mCal = Calendar.getInstance();
+        String dataFormat = "yyyy-MM-dd kk:mm:ss";
+        SimpleDateFormat df = new SimpleDateFormat(dataFormat);
+        long nowTime= 0;
         try {
             nowTime = df.parse(df.format(mCal.getTime())).getTime();
         } catch (ParseException e) {
             e.printStackTrace();
         }
 
+        //每個狀態存一個，以放入BarChart之中
         float[] FallArray = new float[5];
         float[] ComaArray = new float[5];
         float[] DropArray = new float[5];
 
-        for (int i = 0; i <stateData.size();i++) {
-            Log.d("What State",Integer.toString(stateData.get(i)));
+        //將每一筆資料都放入應放入的Array之中
+        for (int i = 0; i <dbStateList.size();i++) {
+            //Log.d("What State",Integer.toString(dbStateList.get(i)));
             switch (FrequencyState) {
                 case FREQUENCY_HALF_HOUR:
-                    switch (stateData.get(i)) {
+                    switch (dbStateList.get(i)) {
                         case STATE_FALL:
-                            FallArray = getBarArray(i, nowTime, df, intPreData, 0.5f,FallArray);
+                            FallArray = getBarArray(i, nowTime, df, dbTimeList, 0.5f,FallArray);
                             break;
                         case STATE_COMA:
-                            ComaArray = getBarArray(i,nowTime,df,intPreData,0.5f,ComaArray);
+                            ComaArray = getBarArray(i,nowTime,df,dbTimeList,0.5f,ComaArray);
                             break;
                         case STATE_DROP:
-                            DropArray= getBarArray(i,nowTime,df,intPreData,0.5f,DropArray);
+                            DropArray= getBarArray(i,nowTime,df,dbTimeList,0.5f,DropArray);
                             break;
                     }
                 case FREQUENCY_ONE_HOUR:
-                    switch (stateData.get(i)) {
+                    switch (dbStateList.get(i)) {
                         case STATE_FALL:
-                            FallArray = getBarArray(i, nowTime, df, intPreData, 1.0f,FallArray);
+                            FallArray = getBarArray(i, nowTime, df, dbTimeList, 1.0f,FallArray);
                             break;
                         case STATE_COMA:
-                            ComaArray = getBarArray(i,nowTime,df,intPreData,1.0f,ComaArray);
+                            ComaArray = getBarArray(i,nowTime,df,dbTimeList,1.0f,ComaArray);
                             break;
                         case STATE_DROP:
-                            DropArray= getBarArray(i,nowTime,df,intPreData,1.0f,DropArray);
+                            DropArray= getBarArray(i,nowTime,df,dbTimeList,1.0f,DropArray);
                             break;
                     }
                     break;
                 case FREQUENCY_TWO_HOUR:
-                    switch (stateData.get(i)) {
+                    switch (dbStateList.get(i)) {
                         case STATE_FALL:
-                            FallArray = getBarArray(i, nowTime, df, intPreData, 2.0f,FallArray);
+                            FallArray = getBarArray(i, nowTime, df, dbTimeList, 2.0f,FallArray);
                             break;
                         case STATE_COMA:
-                            ComaArray = getBarArray(i,nowTime,df,intPreData,2.0f,ComaArray);
+                            ComaArray = getBarArray(i,nowTime,df,dbTimeList,2.0f,ComaArray);
                             break;
                         case STATE_DROP:
-                            DropArray= getBarArray(i,nowTime,df,intPreData,2.0f,DropArray);
+                            DropArray= getBarArray(i,nowTime,df,dbTimeList,2.0f,DropArray);
                             break;
                     }
                     break;
                 case FREQUENCY_FOUR_HOUR:
-                    switch (stateData.get(i)) {
+                    switch (dbStateList.get(i)) {
                         case STATE_FALL:
-                            FallArray = getBarArray(i, nowTime, df, intPreData, 4.0f,FallArray);
+                            FallArray = getBarArray(i, nowTime, df, dbTimeList, 4.0f,FallArray);
                             break;
                         case STATE_COMA:
-                            ComaArray = getBarArray(i,nowTime,df,intPreData,4.0f,ComaArray);
+                            ComaArray = getBarArray(i,nowTime,df,dbTimeList,4.0f,ComaArray);
                             break;
                         case STATE_DROP:
-                            DropArray= getBarArray(i,nowTime,df,intPreData,4.0f,DropArray);
+                            DropArray= getBarArray(i,nowTime,df,dbTimeList,4.0f,DropArray);
                             break;
                     }
                     break;
                 case FREQUENCY_EIGHT_HOUR:
-                    switch (stateData.get(i)) {
+                    switch (dbStateList.get(i)) {
                         case STATE_FALL:
-                            FallArray = getBarArray(i, nowTime, df, intPreData, 8.0f,FallArray);
+                            FallArray = getBarArray(i, nowTime, df, dbTimeList, 8.0f,FallArray);
                             break;
                         case STATE_COMA:
-                            ComaArray = getBarArray(i,nowTime,df,intPreData,8.0f,ComaArray);
+                            ComaArray = getBarArray(i,nowTime,df,dbTimeList,8.0f,ComaArray);
                             break;
                         case STATE_DROP:
-                            DropArray= getBarArray(i,nowTime,df,intPreData,8.0f,DropArray);
+                            DropArray= getBarArray(i,nowTime,df,dbTimeList,8.0f,DropArray);
                             break;
                     }
                     break;
-                case FREQENCY_ONE_DAY:
-                    switch (stateData.get(i)) {
+                case FREQUENCY_ONE_DAY:
+                    switch (dbStateList.get(i)) {
                         case STATE_FALL:
-                            FallArray = getBarArray(i, nowTime, df, intPreData, 24.0f,FallArray);
+                            FallArray = getBarArray(i, nowTime, df, dbTimeList, 24.0f,FallArray);
                             break;
                         case STATE_COMA:
-                            ComaArray = getBarArray(i,nowTime,df,intPreData,24.0f,ComaArray);
+                            ComaArray = getBarArray(i,nowTime,df,dbTimeList,24.0f,ComaArray);
                             break;
                         case STATE_DROP:
-                            DropArray= getBarArray(i,nowTime,df,intPreData,24.0f,DropArray);
+                            DropArray= getBarArray(i,nowTime,df,dbTimeList,24.0f,DropArray);
                             break;
                     }
                     break;
             }
         }
 
-        xAxis.setValueFormatter(new xAxisValueFormatter(TimeArray));
+
+        /***
+         * 做X軸的日期+時間
+         */
+        String[] xTimeArray = new String[5];
+
+        //根據設定的取樣頻率，來決定要放的時間
+        switch(FrequencyState) {
+            case FREQUENCY_HALF_HOUR:
+                xTimeArray = getTimeArray(mCal,xTimeArray,1);
+                break;
+            case FREQUENCY_ONE_HOUR:
+                xTimeArray = getTimeArray(mCal,xTimeArray,2);
+                break;
+            case FREQUENCY_TWO_HOUR:
+                xTimeArray = getTimeArray(mCal,xTimeArray,4);
+                break;
+            case FREQUENCY_FOUR_HOUR:
+                xTimeArray = getTimeArray(mCal,xTimeArray,8);
+                break;
+            case FREQUENCY_EIGHT_HOUR:
+                xTimeArray = getTimeArray(mCal,xTimeArray,16);
+                break;
+            case FREQUENCY_ONE_DAY:
+                xTimeArray = getTimeArray(mCal,xTimeArray,48);
+                break;
+        }
+
+        XAxis xAxis = barChart.getXAxis();
+        //設定X軸的值為xTimeArray中的值
+        xAxis.setValueFormatter(new xAxisValueFormatter(xTimeArray));
 
         YAxis yAxisR = barChart.getAxis(YAxis.AxisDependency.RIGHT);
-        YAxis yAxisL = barChart.getAxis(YAxis.AxisDependency.LEFT);
+        //將Y軸的右邊取消顯示
         yAxisR.setEnabled(false);
+        YAxis yAxisL = barChart.getAxis(YAxis.AxisDependency.LEFT);
+        //設定Y軸的最大最小值
         yAxisL.setAxisMinimum(0);
-        yAxisL.setAxisMaximum(20);
+        yAxisL.setAxisMaximum(30);
 
         Legend legend = barChart.getLegend();
         legend.setXEntrySpace(30f);
 
-        //加入第一筆資料
         List<BarEntry> entries = new ArrayList<>();
 
+        //將先前的Array放入BarEntry之中
         entries.add(new BarEntry(0, new float[] { FallArray[0], ComaArray[0], DropArray[0] }));
         entries.add(new BarEntry(1, new float[] { FallArray[1], ComaArray[1], DropArray[1] }));
         entries.add(new BarEntry(2, new float[] { FallArray[2], ComaArray[2], DropArray[2] }));
@@ -272,6 +284,7 @@ public class Fragment2 extends Fragment {
 
         BarDataSet barDataSet = new BarDataSet(entries, "");
 
+        //設定bar的顯示和顏色
         barDataSet.setColors(getColors());
         barDataSet.setStackLabels(new String[]{"跌倒","昏迷","墜落"});
 
@@ -293,41 +306,43 @@ public class Fragment2 extends Fragment {
         return
     }*/
 
-    private String[] getTimeArray(Calendar mCal, String[] TimeArray, SimpleDateFormat dfXaxis,SimpleDateFormat dfXText,int multi){
+    private String[] getTimeArray(Calendar mCal, String[] TimeArray,int multi){
+        SimpleDateFormat dfTime = new SimpleDateFormat("kk:mm:ss");
+        SimpleDateFormat dfDate = new SimpleDateFormat("yyyy-MM-dd");
         mCal.add(Calendar.MINUTE, -120 * multi);
-        TimeArray[0] = dfXaxis.format(mCal.getTime());
-        txtTime1.setText(dfXText.format(mCal.getTime()));
+        TimeArray[0] = dfTime.format(mCal.getTime());
+        txtTime1.setText(dfDate.format(mCal.getTime()));
 
         //將時間放入X軸Array
         for (int i = 1; i < 5; i++) {
             mCal.add(Calendar.MINUTE, 30* multi );
-            TimeArray[i] = dfXaxis.format(mCal.getTime());
+            TimeArray[i] = dfTime.format(mCal.getTime());
 
-            //寫上x軸的日期 (API只能畫一個)
+            //寫上x軸的日期 (API只能畫一個) 用textView畫剩下的
             switch (i) {
                 case 1:
-                    txtTime2.setText(dfXText.format(mCal.getTime()));
+                    txtTime2.setText(dfDate.format(mCal.getTime()));
                     break;
                 case 2:
-                    txtTime3.setText(dfXText.format(mCal.getTime()));
+                    txtTime3.setText(dfDate.format(mCal.getTime()));
                     break;
                 case 3:
-                    txtTime4.setText(dfXText.format(mCal.getTime()));
+                    txtTime4.setText(dfDate.format(mCal.getTime()));
                     break;
                 case 4:
-                    txtTime5.setText(dfXText.format(mCal.getTime()));
+                    txtTime5.setText(dfDate.format(mCal.getTime()));
                     break;
             }
         }
         return TimeArray;
     }
 
-    private float[] getBarArray(int count, long nowTime,SimpleDateFormat df,ArrayList<String> intPreData ,float multi,float[] barArray){
+    private float[] getBarArray(int count, long nowTime,SimpleDateFormat df,ArrayList<String> dbTimeList ,float multi,float[] barArray){
 
-                //判斷資料應該放在哪個Bar之中
+            //判斷資料應該放在哪個Bar之中
                     try {
                         //資料庫資料轉long
-                        long dbTime = df.parse(intPreData.get(count)).getTime();
+                        long dbTime = df.parse(dbTimeList.get(count)).getTime();
                         //相減算區間
                         long tmp = nowTime - dbTime;
                         //計算時間 秒數,要放入的Array,頻率(半小時)
@@ -354,10 +369,10 @@ public class Fragment2 extends Fragment {
 
     private int[] getColors() {
 
-        int stacksize = 3;
+        int stackSize = 3;
 
         // have as many colors as stack-values per entry
-        int[] colors = new int[stacksize];
+        int[] colors = new int[stackSize];
 
         for (int i = 0; i < colors.length; i++) {
             colors[i] = ColorTemplate.MATERIAL_COLORS[i];
